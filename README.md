@@ -1,6 +1,14 @@
 # CVE Impact Investigator
 > CVE ID を入力すると、Microsoft Defender の脆弱性データを基に自社環境への影響を調査し、影響端末・ソフトウェア・リスク評価を含む日本語レポートを生成する Security Copilot Interactive Agent
 
+## サンプル画面
+- Frontend Web アプリ
+<img width="1214" height="937" alt="image" src="https://github.com/user-attachments/assets/aa550106-2ea7-4810-be4d-13b57677e510" />
+
+- Security Copilot Agent
+<img width="1173" height="768" alt="image" src="https://github.com/user-attachments/assets/c06c5fd4-99ac-4e6c-a9f4-1146654399b8" />
+
+
 ## アーキテクチャ
 
 ```
