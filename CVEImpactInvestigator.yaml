@@ -1,0 +1,252 @@
+Descriptor:
+  Name: CVEImpactInvestigator
+  DisplayName: CVE Impact Investigator
+  Description: >-
+    CVE ID を入力すると、Microsoft Defender の脆弱性情報を基に自社環境への
+    影響を調査し、影響を受ける端末一覧と影響範囲をレポートする
+    Interactive Agent です。Security Copilot の「Chat with agent」機能で
+    チャット形式で利用できます。
+
+AgentDefinitions:
+  - Name: CVEImpactInvestigator
+    DisplayName: CVE Impact Investigator
+    Description: >-
+      CVE ID を入力として受け取り、Defender の脆弱性情報と脅威インテリジェンスを活用して
+      自社環境への影響範囲を調査する Interactive Agent です。
+    Publisher: Custom
+    Product: Security
+    RequiredSkillsets:
+      - CVEImpactInvestigator
+      - ThreatIntelligence.DTI
+    AgentSingleInstanceConstraint: None
+    Triggers:
+      - Name: Default
+        DefaultPollPeriodSeconds: 0
+        ProcessSkill: CVEImpactInvestigator.InvestigateCVEImpact
+        FetchSkill: ''
+    PromptSkill: CVEImpactInvestigator.InvestigateCVEImpact
+
+SkillGroups:
+  - Format: Agent
+    Skills:
+      - Name: InvestigateCVEImpact
+        DisplayName: CVE 影響調査
+        Description: >-
+          指定された CVE ID について、脆弱性の詳細情報を取得し、自社環境で
+          影響を受ける端末とソフトウェアを特定して、影響範囲レポートを生成します。
+        Interfaces:
+          - InteractiveAgent
+        Inputs:
+          - Name: UserRequest
+            Description: >-
+              ユーザーが調査したい CVE ID またはリクエスト。
+              例: CVE-2024-38014 の影響を調べてください
+            DefaultValue: ''
+            Required: true
+        SuggestedPrompts:
+          - Prompt: CVE-2024-38014 の影響を調べてください
+            Title: CVE 影響調査
+            Personas:
+              - 1
+            IsStarterAgent: true
+          - Prompt: CVE-2024-21338 が自社環境に影響するか確認してください
+            Title: CVE 環境影響確認
+            Personas:
+              - 1
+            IsStarterAgent: true
+          - Prompt: CVE-2024-30088, CVE-2024-38054 の影響範囲を調査してください
+            Title: 複数 CVE 一括調査
+            Personas:
+              - 1
+            IsStarterAgent: true
+          - Prompt: 影響を受ける端末の詳細を教えてください
+          - Prompt: 推奨される修復アクションを教えてください
+          - Prompt: 影響を受けるソフトウェアの一覧を出してください
+        Settings:
+          OrchestratorSkill: DefaultAgentOrchestrator
+          Model: gpt-4o
+          Instructions: |
+            # 言語ルール（最優先）
+            - あなたの出力はすべて日本語で行うこと。英語での出力は禁止。
+            - ChildSkills から取得したデータが英語であっても、必ず日本語に翻訳してからレポートに含めること。
+            - 脆弱性の説明（VulnerabilityDescription）は日本語に翻訳して記載すること。
+            - テーブルのヘッダーも日本語にすること。
+            - CVE ID やソフトウェア名など固有名詞はそのまま英語表記でよい。
+
+            # ミッション概要
+            あなたは CVE（共通脆弱性識別子）の影響を自社環境で調査するセキュリティアナリストエージェントです。
+            入力された CVE ID に基づき、以下のワークフローのステップ1〜5をすべて実行し、
+            日本語の影響範囲レポートを生成してください。
+            CVE の概要情報だけを返すのではなく、必ず自社環境への影響調査（ステップ2〜4）まで実行すること。
+
+            # ミッション
+            入力された CVE ID に基づき、脆弱性の詳細情報を取得し、自社環境で影響を受ける
+            端末・ソフトウェアを特定し、リスク評価と推奨アクションを含む包括的レポートを
+            日本語で作成すること。
+
+            # ワークフロー
+
+            1. **CVE 詳細情報の取得**
+               - GetCvesByIdsDti を使用して CVE の概要情報を取得する。
+                 パラメータ: CveIdList にユーザーが指定した CVE ID（カンマ区切り）、ResponseType は 'Summary' を指定。
+               - 取得した情報から CVSS スコア、深刻度、脆弱性の概要、公開日を確認する。
+
+            2. **影響を受ける端末の特定**
+               - GetDevicesVulnerableToCve を使用して、指定した CVE に対して脆弱な状態にあるデバイスの一覧を取得する。
+                 パラメータ: CveId にユーザーが指定した CVE ID を指定。
+               - 各デバイスのデバイス名、OS、深刻度レベル、影響ソフトウェア、推奨セキュリティ更新を確認する。
+
+            3. **影響デバイスの詳細情報取得**
+               - GetDeviceDetailsForCve を使用して、影響を受けるデバイスの露出レベル、
+                 オンボーディング状態、センサー健全性、インターネット公開状態を取得する。
+                 パラメータ: CveId にユーザーが指定した CVE ID を指定。
+
+            4. **影響ソフトウェアの特定**
+               - GetAffectedSoftwareInventory を使用して、影響を受けるソフトウェアが
+                 インストールされているデバイスの詳細を取得する。
+                 パラメータ: CveId にユーザーが指定した CVE ID を指定。
+
+            5. **影響範囲レポートの生成**
+               - 上記のすべての情報を統合して影響範囲レポートを生成する。
+
+            # 出力フォーマット
+            以下の構成で日本語のレポートを生成してください。
+
+            ## CVE 概要
+            - CVE ID、CVSS スコア、深刻度、公開日、エクスプロイト有無
+            - 脆弱性の説明
+
+            ## 自社環境への影響サマリ
+            - 影響を受ける端末数
+            - 影響を受けるソフトウェア数
+            - 深刻度別の端末分布（Critical / High / Medium / Low）
+            - インターネット公開端末への影響有無
+
+            ## 影響端末一覧（テーブル形式）
+            | デバイス名 | OS | 露出レベル | 深刻度 | 影響ソフトウェア | インターネット公開 | センサー状態 |
+
+            ## 影響ソフトウェア一覧
+            | ソフトウェア名 | ベンダー | バージョン | インストール端末数 |
+
+            ## リスク評価
+            - 総合リスクレベル（Critical / High / Medium / Low）
+            - リスク判定根拠（CVSS スコア、エクスプロイト可用性、影響端末数に基づく）
+
+            ## 推奨アクション
+            - 推奨セキュリティ更新プログラム
+            - 優先的に対応すべき端末
+            - 緩和策
+
+            # 注意事項
+            - 複数の CVE ID がカンマ区切りで指定された場合、それぞれの CVE に対して調査を行うこと。
+            - CVE ID のフォーマットが不正な場合は、正しいフォーマット（CVE-YYYY-NNNNN）に修正して処理すること。
+            - データが取得できない場合は、その旨を明記すること。
+            - レポートは必ず日本語で出力すること。英語でのレポート出力は禁止。
+            - CVE の概要だけを返して終了してはいけない。必ずワークフローのステップ1〜5をすべて実行すること。
+            - ChildSkills の GetCvesByIdsDti が英語で結果を返した場合でも、レポートには日本語に翻訳して含めること。
+
+            # 入力
+            {{UserRequest}}
+            上記の CVE ID について、ワークフローのステップ1〜5をすべて実行し、日本語でレポートを生成してください。
+        ChildSkills:
+          - GetCvesByIdsDti
+          - GetDevicesVulnerableToCve
+          - GetDeviceDetailsForCve
+          - GetAffectedSoftwareInventory
+
+  - Format: KQL
+    Skills:
+      - Name: GetDevicesVulnerableToCve
+        DisplayName: CVE 影響デバイス取得
+        Description: >-
+          指定した CVE ID に対して脆弱な状態にあるデバイスの一覧を取得します。
+          デバイス名、OS、深刻度、影響ソフトウェア、推奨セキュリティ更新を返します。
+        Inputs:
+          - Name: CveId
+            Description: >-
+              調査対象の CVE ID（例: CVE-2024-38014）
+            Required: true
+        Settings:
+          Target: Defender
+          Template: |-
+            DeviceTvmSoftwareVulnerabilities
+            | where CveId == "{{CveId}}"
+            | project DeviceId, DeviceName, OSPlatform, OSVersion,
+                      SoftwareVendor, SoftwareName, SoftwareVersion,
+                      CveId, VulnerabilitySeverityLevel,
+                      RecommendedSecurityUpdate, RecommendedSecurityUpdateId,
+                      CveTags
+            | join kind=leftouter (
+                DeviceTvmSoftwareVulnerabilitiesKB
+                | where CveId == "{{CveId}}"
+                | project CveId, CvssScore, IsExploitAvailable,
+                          PublishedDate, VulnerabilityDescription
+              ) on CveId
+            | summarize AffectedSoftware = make_set(strcat(SoftwareVendor, " - ", SoftwareName, " ", SoftwareVersion)),
+                        RecommendedUpdate = take_any(RecommendedSecurityUpdate),
+                        CvssScore = take_any(CvssScore),
+                        IsExploitAvailable = take_any(IsExploitAvailable),
+                        VulnerabilitySeverityLevel = take_any(VulnerabilitySeverityLevel)
+              by DeviceId, DeviceName, OSPlatform, OSVersion, CveId
+            | top 50 by CvssScore desc
+
+      - Name: GetDeviceDetailsForCve
+        DisplayName: CVE 影響デバイス詳細
+        Description: >-
+          指定した CVE に対して脆弱なデバイスの詳細情報（露出レベル、
+          オンボーディング状態、センサー健全性、インターネット公開状態）を取得します。
+        Inputs:
+          - Name: CveId
+            Description: >-
+              調査対象の CVE ID（例: CVE-2024-38014）
+            Required: true
+        Settings:
+          Target: Defender
+          Template: |-
+            let VulnerableDevices = DeviceTvmSoftwareVulnerabilities
+            | where CveId == "{{CveId}}"
+            | distinct DeviceId, DeviceName;
+            VulnerableDevices
+            | join kind=inner (
+                DeviceInfo
+                | where Timestamp > ago(1d)
+                | summarize arg_max(Timestamp, *) by DeviceId
+                | project DeviceId, DeviceName, OSPlatform, OSVersion,
+                          ExposureLevel, OnboardingStatus, SensorHealthState,
+                          IsInternetFacing, DeviceCategory, DeviceType,
+                          MachineGroup, LoggedOnUsers, AssetValue
+              ) on DeviceId
+            | project DeviceName, OSPlatform, OSVersion,
+                      ExposureLevel, OnboardingStatus, SensorHealthState,
+                      IsInternetFacing, DeviceCategory, DeviceType,
+                      MachineGroup, AssetValue
+            | top 50 by ExposureLevel asc
+
+      - Name: GetAffectedSoftwareInventory
+        DisplayName: CVE 影響ソフトウェア一覧
+        Description: >-
+          指定した CVE の影響を受けるソフトウェアと、それがインストールされている
+          デバイス数を取得します。パッチ適用の優先順位付けに活用できます。
+        Inputs:
+          - Name: CveId
+            Description: >-
+              調査対象の CVE ID（例: CVE-2024-38014）
+            Required: true
+        Settings:
+          Target: Defender
+          Template: |-
+            let KBInfo = DeviceTvmSoftwareVulnerabilitiesKB
+            | where CveId == "{{CveId}}"
+            | project CvssScore, IsExploitAvailable, PublishedDate;
+            DeviceTvmSoftwareVulnerabilities
+            | where CveId == "{{CveId}}"
+            | summarize AffectedDeviceCount = dcount(DeviceId),
+                        AffectedDevices = make_set(DeviceName, 20)
+              by SoftwareVendor, SoftwareName, SoftwareVersion, VulnerabilitySeverityLevel
+            | extend CvssScore = toscalar(KBInfo | project CvssScore),
+                     IsExploitAvailable = toscalar(KBInfo | project IsExploitAvailable),
+                     PublishedDate = toscalar(KBInfo | project PublishedDate)
+            | project SoftwareVendor, SoftwareName, SoftwareVersion,
+                      VulnerabilitySeverityLevel, CvssScore, IsExploitAvailable,
+                      PublishedDate, AffectedDeviceCount, AffectedDevices
+            | top 50 by AffectedDeviceCount desc
