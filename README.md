@@ -1,14 +1,13 @@
 # CVE Impact Investigator
-
-> CVE ID を入力すると、Microsoft Defender の脆弱性データを基に自社環境への影響を調査し、影響端末・ソフトウェア・リスク評価を含む日本語レポートを生成する Security Copilot Interactive Agent ソリューション。
+> CVE ID を入力すると、Microsoft Defender の脆弱性データを基に自社環境への影響を調査し、影響端末・ソフトウェア・リスク評価を含む日本語レポートを生成する Security Copilot Interactive Agent
 
 ## アーキテクチャ
 
 ```
-┌──────────────┐     HTTP POST      ┌──────────────────┐     Security Copilot API     ┌────────────────────┐
-│  Web フロント │ ──────────────────▶ │   Azure Logic App │ ──────────────────────────▶ │  Security Copilot  │
-│  (HTML/JS)   │ ◀────────────────── │   (ARM Template)  │ ◀────────────────────────── │  Interactive Agent │
-└──────────────┘     JSON レポート    └──────────────────┘     評価結果 (Markdown)       └────────────────────┘
+┌──────────────┐     HTTP POST      ┌──────────────────┐     Security Copilot API    ┌────────────────────┐
+│  Web フロント │ ─────────────────▶ │  Azure Logic App │ ──────────────────────────▶ │  Security Copilot  │
+│  (HTML/JS)   │ ◀───────────────── │  (ARM Template)  │ ◀────────────────────────── │  Interactive Agent │
+└──────────────┘    JSON レポート    └──────────────────┘     評価結果 (Markdown)     └────────────────────┘
                                                                                               │
                                                                                    ┌──────────┼──────────┐
                                                                                    ▼          ▼          ▼
@@ -21,7 +20,6 @@
 | ファイル | 説明 |
 |---------|------|
 | `CVEImpactInvestigator.yaml` | Security Copilot Agent マニフェスト（YAML） |
-| `CVEImpactInvestigator_LogicApp_ARM.json` | Logic App ARM テンプレート（Web → Security Copilot ブリッジ） |
 | `CVEImpactInvestigator_PowerApp.html` | Web フロントエンド（HTML/CSS/JS 単一ファイル） |
 | `CVEImpactInvestigator_card.html` | プラグインカード（ビジュアル概要） |
 
@@ -30,13 +28,6 @@
 - **Microsoft Security Copilot** へのアクセス
 - **Microsoft Defender for Endpoint** が有効（Advanced Hunting テーブルが必要）
 - **Azure サブスクリプション** — Logic App デプロイ用
-- **Entra ID アプリ登録** — Security Copilot API 呼び出し用
-
-### 必要な Entra ID API 権限
-
-| 権限 | 種類 | 用途 |
-|------|------|------|
-| `SecurityCopilot.Sessions.ReadWrite` | Application | セッション作成・評価実行 |
 
 ## セットアップ手順
 
@@ -47,17 +38,7 @@
 3. `CVEImpactInvestigator.yaml` をアップロード
 4. プラグインを有効化
 
-### 2. Entra ID アプリ登録
-
-1. [Azure Portal](https://portal.azure.com) → **Entra ID** → **App registrations** → **New registration**
-2. 名前: `CVEImpactInvestigator-App`
-3. **API permissions** → **Add a permission** → **APIs my organization uses**
-4. `Microsoft Security Copilot` を検索 → `SecurityCopilot.Sessions.ReadWrite` を追加
-5. **管理者の同意を付与**
-6. **Certificates & secrets** → 新しいクライアントシークレットを作成
-7. **テナント ID**、**クライアント ID**、**クライアントシークレット** をメモ
-
-### 3. Logic App のデプロイ
+### 2. Logic App のデプロイ
 
 Azure CLI でデプロイ:
 
